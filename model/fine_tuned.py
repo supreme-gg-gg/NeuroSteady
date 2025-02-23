@@ -32,6 +32,17 @@ class AdaptedModel(nn.Module):
         # Append the custom head
         x = self.adapter(x)
         return x
+    
+    def inference(self, x):
+        """
+        This returns the actual label 0 or 1
+        """
+        self.eval()
+        with torch.no_grad():
+            x = x.to(self.device)
+            x = self.forward(x)
+            x = torch.softmax(x, dim=1)
+            return torch.argmax(x, dim=1).cpu().numpy()
 
     def train_model(self, train_loader, num_epochs=50):
         for epoch in range(num_epochs):
@@ -52,7 +63,7 @@ class AdaptedModel(nn.Module):
             'base': self.base.state_dict(),  # Save base model weights
             'adapter': self.adapter.state_dict()  # Save adapter weights
         }, 'adapted-1.pth')
-        
+
         print("Model saved")
 
     def load(self, filename, base_model=None):
@@ -64,13 +75,9 @@ class AdaptedModel(nn.Module):
         # Load the checkpoint and check if 'base' exists in the checkpoint
         checkpoint = torch.load(filename, map_location=self.device)
 
-        # If base model is passed, load only the adapter weights and keep the base model unchanged
-        if base_model:
-            self.base = base_model  # Use the passed base model
-            adapter_state_dict = checkpoint['adapter']  # Only load adapter weights
-            self.adapter.load_state_dict(adapter_state_dict)
-        else:
-            # If base model isn't passed, load the entire model weights
-            self.load_state_dict(checkpoint)
+        self.adapter.load_state_dict(checkpoint['adapter'])
+
+        if base_model is None: # this means load all, did not pass in base
+            self.base.load_state_dict(checkpoint['base'])
         
         self.eval()  # Set model to evaluation mode

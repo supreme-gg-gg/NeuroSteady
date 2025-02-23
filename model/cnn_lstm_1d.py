@@ -107,6 +107,11 @@ class CNNLSTM(nn.Module):
             print(f"No checkpoint found at {filename}")
     
     def inference(self, dataloader):
+        """
+        Returns the predictions for the entire dataset
+        actual labels 0 or 1 not logits or probabilities
+        does softmax and argmax automatically
+        """
         # Use self.device for inference
         self.to(self.device)
         self.eval()
@@ -115,7 +120,7 @@ class CNNLSTM(nn.Module):
             for x, _ in dataloader:
                 x = x.to(self.device)
                 outputs = self(x)
-                preds = torch.softmax(outputs, dim=1)
+                preds = torch.softmax(outputs, dim=1).argmax(dim=1)
                 all_preds.append(preds)
         return torch.cat(all_preds, dim=0)
     
