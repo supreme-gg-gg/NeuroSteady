@@ -16,7 +16,7 @@ void setup() {
     }
 
     Serial.println("MPU6050 initialized.");
-    Serial.println("ax,ay,az,gx,gy,gz,tremor");  // CSV Header
+    Serial.println("aX,aY,aZ,gX,gY,gZ,Result");  // CSV Header
 }
 
 void loop() {
