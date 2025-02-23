@@ -89,7 +89,7 @@ while keep_running:
         if tracking:
             data_window.append((aX, aY, aZ))
             if len(data_window) > window_len:
-                data_window.pop(0)
+                data_window = data_window[len(data_window)- window_len:]
             if len(data_window) == window_len and (time.time() - last_send_time) >= send_interval:
                 nn_pred = make_prediction_torch(data_window)
                 rms_pred = preprocess_predict(data_window)
