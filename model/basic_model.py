@@ -120,5 +120,5 @@ def visualize_tremor(csv_file, window_size=100, rms_threshold=1, fs=50, freq_ran
 
 # Example usage:
 if __name__ == "__main__":
-    csv_file = "data/tremor_data.csv"  # Path to your tremor CSV file
+    csv_file = "tremor_data.csv"  # Path to your tremor CSV file
     visualize_tremor(csv_file, window_size=50, rms_threshold=1, fs=50, freq_range=(4,7))

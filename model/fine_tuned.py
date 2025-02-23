@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from cnn_lstm_1d import CNNLSTM
+from model.cnn_lstm_1d import CNNLSTM
 
 class AdaptedModel(nn.Module):
     """
@@ -73,7 +73,7 @@ class AdaptedModel(nn.Module):
         the base model has been initialized.
         """
         # Load the checkpoint and check if 'base' exists in the checkpoint
-        checkpoint = torch.load(filename, map_location=self.device)
+        checkpoint = torch.load(filename, map_location=self.device, weights_only=True)
 
         self.adapter.load_state_dict(checkpoint['adapter'])
 
