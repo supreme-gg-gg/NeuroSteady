@@ -5,9 +5,10 @@ import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 
 class CNNLSTM(nn.Module):
-    def __init__(self, num_classes=2, cnn_channels=16, lstm_hidden_size=32, lstm_layers=2, lr=0.001):
+    def __init__(self, num_classes=2, cnn_channels=16, lstm_hidden_size=32, lstm_layers=2, lr=0.001, device=torch.device("cpu")):
         super(CNNLSTM, self).__init__()
-        
+        self.device = device  # Set device for the model
+
         # CNN Feature Extractor
         self.cnn = nn.Sequential(
             nn.Conv1d(in_channels=3, out_channels=cnn_channels, kernel_size=3, padding=1),
@@ -43,17 +44,34 @@ class CNNLSTM(nn.Module):
         
         # TensorBoard writer
         self.writer = SummaryWriter()
+
+        # move model to device, similarly for all tensors
+        self.to(self.device)
     
-    def forward(self, x):
+    def forward(self, x, use_linear=True):
+        """
+        x: (batch, seq_length, 3)
+        use_linear: Whether to use the linear head or not
+        """
+
         # Input: (batch, seq_length, 3) -> permute to (batch, 3, seq_length)
+        x = x.to(self.device)
         x = x.permute(0, 2, 1)
         cnn_out = self.cnn(x)
+
         # Permute back to (batch, seq_length, features)
         cnn_out = cnn_out.permute(0, 2, 1)
         lstm_out, (h_n, _) = self.lstm(cnn_out)
+
         # Use the last hidden state from the final LSTM layer
         last_hidden = h_n[-1]
-        output = self.fc(last_hidden)
+
+        # When transfer learning, turn this off and learn the custom head
+        if use_linear:
+            output = self.fc(last_hidden)
+        else:
+            output = last_hidden
+
         return output
     
     def train_step(self, x, y):
@@ -61,6 +79,8 @@ class CNNLSTM(nn.Module):
         x: (batch, seq_length, 3)
         y: (batch)
         """
+        x = x.to(self.device)
+        y = y.to(self.device)
         self.optimizer.zero_grad()
         outputs = self(x)
         loss = self.criterion(outputs, y)
@@ -79,27 +99,33 @@ class CNNLSTM(nn.Module):
     
     def load_checkpoint(self, filename):
         if os.path.isfile(filename):
-            checkpoint = torch.load(filename)
+            checkpoint = torch.load(filename, map_location=self.device, weights_only=True)
             self.load_state_dict(checkpoint['model_state_dict'])
             self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
             print(f"Checkpoint loaded from {filename} at epoch {checkpoint.get('epoch', 'Unknown')}")
         else:
             print(f"No checkpoint found at {filename}")
     
-    def inference(self, dataloader, device=torch.device("cpu")):
-        self.to(device)
+    def inference(self, dataloader):
+        # Use self.device for inference
+        self.to(self.device)
         self.eval()
         all_preds = []
         with torch.no_grad():
             for x, _ in dataloader:
-                inputs = x.to(device)
-                outputs = self(inputs)
+                x = x.to(self.device)
+                outputs = self(x)
                 preds = torch.softmax(outputs, dim=1)
                 all_preds.append(preds)
         return torch.cat(all_preds, dim=0)
     
-    def train_model(self, train_loader, epochs=100, checkpoint_interval=50, device=torch.device("cpu")):
-        self.to(device)
+    def train_model(self, train_loader, epochs=100, checkpoint_interval=50):
+        """
+        Uses TensorBoard to log training loss by default.
+        You can visualize the logs using `tensorboard --logdir=runs` in the terminal.
+        This assumes you have the `runs` directory in the same folder as this script.
+        So if you use colab please download the logs and visualize them locally.
+        """
         for epoch in range(epochs):
             self.train()  # Set model to training mode
             total_loss = 0.0
