@@ -60,10 +60,10 @@ class TremorDataset(Dataset):
         indices = range(len(self.labels))
         plt.fill_between(
             indices, 
-            aX.min().item(), 
+            aX.min().item(),
             aX.max().item(),
             where=(self.labels == 1).numpy(),
-            color='red', 
+            color='red',
             alpha=0.3,
             label='Tremor'
         )
@@ -89,6 +89,20 @@ def get_train_test_loaders(filepath, batch_size=8, seq_length=100, test_ratio=0.
     test_loader = DataLoader(Subset(dataset, test_indices), batch_size=batch_size, shuffle=False)
     return train_loader, test_loader
 
+def get_train_test_validate_loaders(filepath, batch_size=8, seq_length=100, test_ratio=0.2, validate_ratio=0.1):
+    dataset = TremorDataset(filepath, seq_length=seq_length)
+    dataset_len = len(dataset)
+    indices = list(range(dataset_len))
+    split1 = int(dataset_len * (1 - test_ratio - validate_ratio))
+    split2 = int(dataset_len * (1 - validate_ratio))
+    train_indices = indices[:split1]
+    test_indices = indices[split1:split2]
+    validate_indices = indices[split2:]
+    train_loader = DataLoader(Subset(dataset, train_indices), batch_size=batch_size, shuffle=False)
+    test_loader = DataLoader(Subset(dataset, test_indices), batch_size=batch_size, shuffle=False)
+    validate_loader = DataLoader(Subset(dataset, validate_indices), batch_size=batch_size, shuffle=False)
+    return train_loader, test_loader, validate_loader
+
 def test_model(model, test_loader, device=torch.device("cpu")):
     model.to(device)
     model.eval()
@@ -98,8 +112,8 @@ def test_model(model, test_loader, device=torch.device("cpu")):
         for x, y in test_loader:
             x = x.to(device)
             y = y.to(device)
-            outputs = model(x)
-            preds = outputs.argmax(dim=1)
+            outputs = model.forward(x)
+            preds = outputs.softmax(dim=1).argmax(dim=1)
             all_preds.append(preds.cpu())
             all_true.append(y.cpu())
     all_preds = torch.cat(all_preds).numpy()

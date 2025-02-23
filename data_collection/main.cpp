@@ -1,74 +1,48 @@
 #include <Wire.h>
 #include <MPU6050.h>
-#include "SerialDataExporter.h"
-
-int bufferSizes[] = {100, 4, 4};
-SerialDataExporter exporter = SerialDataExporter(Serial, bufferSizes);
 
 MPU6050 mpu;
-
-bool collecting = false;  // Toggle for data collection
-char input;
-int tremor = 0;
-
+bool collecting = false;
+int tremor = 0;  // Default: no tremor
 
 void setup() {
-    Serial.begin(9600);  // Start Serial communication
-    Wire.begin();          // Initialize I2C
-    mpu.initialize();      // Initialize MPU6050
+    Serial.begin(115200);  // Higher baud rate for faster transfer
+    Wire.begin();
+    mpu.initialize();
 
     if (!mpu.testConnection()) {
         Serial.println("MPU6050 connection failed!");
-        while (1);  // Halt if the sensor is not found
+        while (1);  // Stop if sensor not found
     }
 
     Serial.println("MPU6050 initialized.");
+    Serial.println("ax,ay,az,gx,gy,gz,tremor");  // CSV Header
 }
 
 void loop() {
-    // Check for Serial command to toggle data collection
-    char command;
     if (Serial.available() > 0) {
-        command = Serial.read();
+        char command = Serial.read();
         if (command == 's') {
             collecting = !collecting;
-            Serial.print("Data Collection: ");
             Serial.println(collecting ? "STARTED" : "STOPPED");
-        }
-         if(command == 'y'){
-        tremor = 1;
-      }
-      if(command == 'n'){
-          tremor = 0;
+        } 
+        if (command == 'y') tremor = 1;
+        if (command == 'n') tremor = 0;
     }
-    }
-
-
 
     if (collecting) {
-        int16_t accelX, accelY, accelZ, gyroX, gyroY, gyroZ;
-        mpu.getAcceleration(&accelX, &accelY, &accelZ);
-        mpu.getRotation(&gyroX, &gyroY, &gyroZ);
-        // Print sensor data in CSV format
-        Serial.print(accelX);
-        Serial.print(",");
-        Serial.print(accelY);
-        Serial.print(",");
-        Serial.print(accelZ);
-        Serial.print(",");
-        exporter.add("x", accelX);
-        exporter.add("y", accelY);
-        exporter.add("z", accelZ);
+        int16_t ax, ay, az, gx, gy, gz;
+        mpu.getAcceleration(&ax, &ay, &az);
+        mpu.getRotation(&gx, &gy, &gz);
 
-        if(tremor == 1){
-            Serial.println(1);
-            exporter.add("tremor", 1);
-        }else{
-            Serial.println(0);
-            exporter.add("tremor", 0);
-        }
+        Serial.print(ax); Serial.print(",");
+        Serial.print(ay); Serial.print(",");
+        Serial.print(az); Serial.print(",");
+        Serial.print(gx); Serial.print(",");
+        Serial.print(gy); Serial.print(",");
+        Serial.print(gz); Serial.print(",");
+        Serial.println(tremor);
 
-        exporter.exportJSON();
-        delay(100);  // Adjust sampling rate
+        delay(50);  // Adjust for sampling rate
     }
 }

@@ -5,7 +5,7 @@ import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 
 class CNNLSTM(nn.Module):
-    def __init__(self, num_classes=2, cnn_channels=16, lstm_hidden_size=32, lstm_layers=2, lr=0.001, device=torch.device("cpu")):
+    def __init__(self, num_classes=2, cnn_channels=16, lstm_hidden_size=32, lstm_layers=1, lr=0.001, device=torch.device("cpu")):
         super(CNNLSTM, self).__init__()
         self.device = device  # Set device for the model
 
@@ -22,7 +22,7 @@ class CNNLSTM(nn.Module):
             nn.MaxPool1d(kernel_size=2)
         )
 
-        # Bidirectional LSTM
+        # LSTM
         self.lstm = nn.LSTM(
             input_size=cnn_channels * 2,
             hidden_size=lstm_hidden_size,
@@ -119,7 +119,7 @@ class CNNLSTM(nn.Module):
                 all_preds.append(preds)
         return torch.cat(all_preds, dim=0)
     
-    def train_model(self, train_loader, epochs=100, checkpoint_interval=50):
+    def train_model(self, train_loader, val_loader=None, epochs=100, checkpoint_interval=50):
         """
         Uses TensorBoard to log training loss by default.
         You can visualize the logs using `tensorboard --logdir=runs` in the terminal.
@@ -137,14 +137,26 @@ class CNNLSTM(nn.Module):
                 global_step = epoch * len(train_loader) + i
                 self.writer.add_scalar("Batch Loss", loss, global_step)
             avg_loss = total_loss / len(train_loader)
-            
-            print(f"Epoch {epoch+1}/{epochs}, Average Loss: {avg_loss:.4f}")
             self.writer.add_scalar("Epoch Loss", avg_loss, epoch+1)
-
+            print(f"Epoch {epoch+1}/{epochs}, Train Loss: {avg_loss:.4f}")
+            
+            if val_loader is not None:
+                self.eval()
+                val_loss = 0.0
+                with torch.no_grad():
+                    for x_val, y_val in val_loader:
+                        x_val = x_val.to(self.device)
+                        y_val = y_val.to(self.device)
+                        outputs = self(x_val)
+                        loss_val = self.criterion(outputs, y_val)
+                        val_loss += loss_val.item()
+                    avg_val_loss = val_loss / len(val_loader)
+                    self.writer.add_scalar("Validation Loss", avg_val_loss, epoch+1)
+                    print(f"Epoch {epoch+1}/{epochs}, Validation Loss: {avg_val_loss:.4f}")
+                    
             if (epoch + 1) % checkpoint_interval == 0:
                 self.save_checkpoint(epoch+1, f"checkpoint_{epoch+1}.pth")
 
         self.writer.close()
-        # Final save
         self.save_checkpoint(epochs, "final_model.pth")
         print("Training complete")

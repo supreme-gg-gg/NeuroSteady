@@ -51,7 +51,7 @@ def log_data():
 
     with open(OUTPUT_FILE, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
-        writer.writerow(["ax", "ay", "az", "gx", "gy", "gz", "tremor"])  # CSV Header
+        writer.writerow(["aX", "aY", "aZ", "gX", "gY", "gZ", "Result"])  # CSV Header
 
         try:
             while running:
