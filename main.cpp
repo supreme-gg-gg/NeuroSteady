@@ -65,7 +65,7 @@ int getFilteredTremor(int newTremor) {
 }
 
 unsigned long previousMillis = 0;
-const long interval = 100; // 50ms interval for sampling
+const long interval = 100; // 50ms interval for sampling does not work likely due to bandwidth of the Serial cable/port
 
 void loop() {
   unsigned long currentMillis = millis();
