@@ -22,43 +22,49 @@ class TremorDataset(Dataset):
 
     def __getitem__(self, index):
         # Extract the time series segment of shape (seq_length, 3)
-        X_seq = self.features[index:index + self.seq_length]  
+        X_seq = self.features[index:index + self.seq_length]
         y = self.labels[index + self.seq_length - 1]
         
         # Transform each channel's time series to spectrogram
-        spectrograms = []
-        n_fft = 32
-        hop_length = 4
-        for ch in range(X_seq.shape[1]):
-            channel_signal = X_seq[:, ch]
-            # Compute the short-time Fourier transform; returns complex tensor
-            stft_result = torch.stft(channel_signal, n_fft=n_fft, hop_length=hop_length, return_complex=True)
-            # Compute magnitude spectrogram
-            spec = stft_result.abs()
-            spectrograms.append(spec)
-        # Stack spectrograms to get tensor shape: (3, freq_bins, time_frames)
-        spectrogram = torch.stack(spectrograms, dim=0)
-        return spectrogram, y
+        # spectrograms = []
+        # n_fft = 32
+        # hop_length = 4
+        # for ch in range(X_seq.shape[1]):
+        #     channel_signal = X_seq[:, ch]
+        #     # Compute the short-time Fourier transform; returns complex tensor
+        #     stft_result = torch.stft(channel_signal, n_fft=n_fft, hop_length=hop_length, return_complex=True)
+        #     # Compute magnitude spectrogram
+        #     spec = stft_result.abs()
+        #     spectrograms.append(spec)
+        # # Stack spectrograms to get tensor shape: (3, freq_bins, time_frames)
+        # spectrogram = torch.stack(spectrograms, dim=0)
+        # return spectrogram, y
+
+        return X_seq, y
     
     def visualize(self):
         """Plot the entire dataset"""
         import matplotlib.pyplot as plt
 
+        aX = self.features[:, 0]
+        aY = self.features[:, 1]
+        aZ = self.features[:, 2]
+
         # Plot the accelerometer data
         plt.figure(figsize=(14, 7))
-        plt.plot(self.aX, label='aX')
-        plt.plot(self.aY, label='aY')
-        plt.plot(self.aZ, label='aZ')
+        plt.plot(aX, label='aX')
+        plt.plot(aY, label='aY')
+        plt.plot(aZ, label='aZ')
 
         # Highlight regions where result == 1 (tremor)
         indices = range(len(self.labels))
         plt.fill_between(
             indices, 
-            self.aX.min().item(), 
-            self.aX.max().item(),
+            aX.min().item(), 
+            aX.max().item(),
             where=(self.labels == 1).numpy(),
             color='red', 
-            alpha=0.3, 
+            alpha=0.3,
             label='Tremor'
         )
 

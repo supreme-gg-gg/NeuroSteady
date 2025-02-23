@@ -5,27 +5,42 @@ import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 
 class CNNLSTM(nn.Module):
-    def __init__(self, num_classes=2, cnn_channels=16, lstm_hidden_size=32, lstm_layers=1, lr=0.001):
+    def __init__(self, num_classes=2, cnn_channels=16, lstm_hidden_size=32, lstm_layers=2, lr=0.001):
         super(CNNLSTM, self).__init__()
-        # CNN expects input in (batch, channels, seq_length)
+        
+        # CNN Feature Extractor
         self.cnn = nn.Sequential(
             nn.Conv1d(in_channels=3, out_channels=cnn_channels, kernel_size=3, padding=1),
             nn.ReLU(),
             nn.MaxPool1d(kernel_size=2),
             nn.Conv1d(in_channels=cnn_channels, out_channels=cnn_channels * 2, kernel_size=3, padding=1),
             nn.ReLU(),
+            nn.MaxPool1d(kernel_size=2),
+            nn.Conv1d(in_channels=cnn_channels * 2, out_channels=cnn_channels * 2, kernel_size=3, padding=1),
+            nn.ReLU(),
             nn.MaxPool1d(kernel_size=2)
         )
-        # LSTM expects input in (batch, sequence, features)
+
+        # Bidirectional LSTM
         self.lstm = nn.LSTM(
             input_size=cnn_channels * 2,
             hidden_size=lstm_hidden_size,
             num_layers=lstm_layers,
-            batch_first=True
+            batch_first=True,
         )
-        self.fc = nn.Linear(lstm_hidden_size, num_classes)
+
+        # Fully Connected Classifier
+        self.fc = nn.Sequential(
+            nn.BatchNorm1d(lstm_hidden_size),
+            nn.Linear(lstm_hidden_size, 128),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(128, num_classes)
+        )
+
         self.optimizer = optim.Adam(self.parameters(), lr=lr)
         self.criterion = nn.CrossEntropyLoss()
+        
         # TensorBoard writer
         self.writer = SummaryWriter()
     
