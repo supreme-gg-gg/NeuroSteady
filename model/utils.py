@@ -42,7 +42,7 @@ class TremorDataset(Dataset):
 
         return X_seq, y
     
-    def visualize(self):
+    def visualize(self, first_n=1000):
         """Plot the entire dataset"""
         import matplotlib.pyplot as plt
 
@@ -52,17 +52,17 @@ class TremorDataset(Dataset):
 
         # Plot the accelerometer data
         plt.figure(figsize=(14, 7))
-        plt.plot(aX, label='aX')
-        plt.plot(aY, label='aY')
-        plt.plot(aZ, label='aZ')
+        plt.plot(aX[:first_n], label='aX')
+        plt.plot(aY[:first_n], label='aY')
+        plt.plot(aZ[:first_n], label='aZ')
 
         # Highlight regions where result == 1 (tremor)
-        indices = range(len(self.labels))
+        indices = range(len(self.labels[:first_n]))
         plt.fill_between(
-            indices, 
-            aX.min().item(),
-            aX.max().item(),
-            where=(self.labels == 1).numpy(),
+            indices,
+            aX[:first_n].min().item(),
+            aX[:first_n].max().item(),
+            where=(self.labels[:first_n] == 1).numpy(),
             color='red',
             alpha=0.3,
             label='Tremor'

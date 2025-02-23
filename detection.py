@@ -6,6 +6,7 @@ import time
 
 from model.fine_tuned import AdaptedModel
 from model.filter_rms import detect_tremor_sensor  # non-ML detector
+from model.filter_rms import EnsemblePredictor  # New predictor class
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = AdaptedModel(device=device)
@@ -19,6 +20,9 @@ data_window = []
 tracking = False       # Controls whether sensor data is processed
 keep_running = True    # Main loop control
 
+# Instantiate the predictor with a history window of 5 predictions
+predictor = EnsemblePredictor(window_size=5)
+
 def preprocess_predict(data):
     """Non-ML method using RMS to detect tremor."""
     data = np.array(data, dtype=np.float32)[:, :3]
@@ -26,14 +30,12 @@ def preprocess_predict(data):
 
 def make_prediction_torch(data):
     """ML method: Preprocess window data and get nn prediction."""
-    data = np.array(data)
-    data = data[:, :3]
-    # Normalize data (simple normalization)
+    data = np.array(data)[:, :3]
     data = (data - data.mean()) / data.std()
     tensor_data = torch.tensor(data, dtype=torch.float32).unsqueeze(0).to(device)
     with torch.no_grad():
         pred = model.inference(tensor_data)
-    return bool(pred)  # Convert 0 or 1 to bool
+    return bool(pred)
 
 def ensemble_detect(nn_pred: bool, rms_pred: bool, weight_nn: float = 0.5, weight_rms: float = 0.5) -> bool:
     score = weight_nn * int(nn_pred) + weight_rms * int(rms_pred)
@@ -66,7 +68,6 @@ def command_listener():
 # Start command listener thread
 threading.Thread(target=command_listener, daemon=True).start()
 
-# Main continuous loop: read data and process predictions
 print("Starting continuous detection...")
 last_send_time = time.time()
 send_interval = 0.2  # seconds - how frequently to send prediction commands
@@ -83,21 +84,22 @@ while keep_running:
         except Exception:
             continue
 
-        # Print sensor reading (optional)
         print(f"Read: aX={aX}, aY={aY}, aZ={aZ}")
 
         if tracking:
             data_window.append((aX, aY, aZ))
             if len(data_window) > window_len:
                 data_window.pop(0)
-            # Process prediction if window full and if enough time elapsed since last command sent
             if len(data_window) == window_len and (time.time() - last_send_time) >= send_interval:
                 nn_pred = make_prediction_torch(data_window)
                 rms_pred = preprocess_predict(data_window)
                 final_pred = ensemble_detect(nn_pred, rms_pred)
-                print(f"Ensemble Prediction (Tremor): {final_pred}")
-                # Send command to Arduino: '1' for tremor detected, '0' otherwise.
-                ser.write(str(int(final_pred)).encode())
+                # Add to predictor history
+                predictor.add_prediction(final_pred)
+                consistent = predictor.consistent_prediction()
+                print(f"Prediction: {consistent}")
+                # Send command based on consistent result ('1' for tremor, '0' otherwise)
+                ser.write(str(int(consistent)).encode())
                 last_send_time = time.time()
         else:
             data_window = []
