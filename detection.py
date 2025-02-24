@@ -22,6 +22,7 @@ keep_running = True    # Main loop control
 
 # Instantiate the predictor with a history window of 5 predictions
 predictor = EnsemblePredictor(window_size=5)
+timestep_counter = 0
 
 def preprocess_predict(data):
     """Non-ML method using RMS to detect tremor."""
@@ -89,18 +90,20 @@ while keep_running:
         if tracking:
             data_window.append((aX, aY, aZ))
             if len(data_window) > window_len:
-                data_window = data_window[len(data_window)- window_len:]
+                data_window = data_window[-window_len:]
             if len(data_window) == window_len and (time.time() - last_send_time) >= send_interval:
-                nn_pred = make_prediction_torch(data_window)
-                rms_pred = preprocess_predict(data_window)
-                final_pred = ensemble_detect(nn_pred, rms_pred)
-                # Add to predictor history
-                predictor.add_prediction(final_pred)
-                consistent = predictor.consistent_prediction()
-                print(f"Prediction: {consistent}")
-                # Send command based on consistent result ('1' for tremor, '0' otherwise)
-                ser.write(str(int(consistent)).encode())
-                last_send_time = time.time()
+                timestep_counter += 1
+                if timestep_counter % 5 == 0:
+                    nn_pred = make_prediction_torch(data_window)
+                    rms_pred = preprocess_predict(data_window)
+                    final_pred = ensemble_detect(nn_pred, rms_pred)
+                    # Add to predictor history
+                    predictor.add_prediction(final_pred)
+                    consistent = predictor.consistent_prediction()
+                    print(f"Prediction: {consistent}")
+                    # Send command based on consistent result ('1' for tremor, '0' otherwise)
+                    ser.write(str(int(consistent)).encode())
+                    last_send_time = time.time()
         else:
             data_window = []
     except Exception as e:
