@@ -1,12 +1,12 @@
-# Hand Tremor Intervention in Neurosurgery
+# Hand Tremor Stabalization in Neurosurgery
 
 In the 24-hour BMEC hackathon, we used few-shot transfer learning with CNN-LSTM to detect slight hand tremors of neurosurgeons during surgery, ensembled with a simple majority voting system with a sliding window time-frequency analysis. This triggers an intervention using a wearable device consistent of servo actuators to stabalize the hand of the surgeon during operation.
 
 ![overview](resource/overview.png)
 
-> This project is submitted to BMEC NeuroHacks 2025 at the University of Toronto.
+> This project is submitted to BMEC NeuroHacks 2025 at the University of Toronto and winner of Best Prototype and Top 3 Overall
 
-> We will embed a short demo video soon...
+https://github.com/user-attachments/assets/b571f697-357e-4ac6-b52e-ebd0e6834ed5
 
 ## Background
 
@@ -20,7 +20,7 @@ We then obtained our custom dataset by simulating tremors and collecting them us
 
 Using tSNE, we have shown the source domain and target domain are close to each other, supporting the viability of few-shot learning. The feature mapping extracted from the CNN-LSTM layers overlap significantly between the two domains.
 
-![tSNE](resource/tsne-lstm.png)
+<img src="resource/tsne-lstm.png" width="50%">
 
 Therefore, we decided to only fine-tune the feed forward layers of the model on the custom dataset and freeze the CNN-LSTM layers.
 
@@ -34,7 +34,7 @@ The base model achieved an accuracy of 85% with minor manual optimization and li
 
 During fine tuning, we freeze the CNN-LSTM layers and only retrain the feed forward layers. This is because the base dataset is large and the custom dataset is small. The final accuracy obtained on our own dataset in 78% in 50 epochs. This is without any data augmentation or other techniques to improve the model. **For improvement, explicit feature engineering is needed as shown in various research paper that achieved 80-90% accuracy for PD tremors.**
 
-![results](resource/stats.png)
+<img src="resource/stats.png" width="50%">
 
 This is then ensembled with a simple majority voting system with a sliding window time-frequency analysis. The model is run on the windowed data and the majority vote is taken. This is done to reduce the false positives and false negatives, given that the CNN-LSTM model is not perfect and quite sensitive to the input data, while traditional signal processing methods are not sensitive enough but are robust.
 
