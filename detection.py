@@ -71,7 +71,7 @@ threading.Thread(target=command_listener, daemon=True).start()
 
 print("Starting continuous detection...")
 last_send_time = time.time()
-send_interval = 0.2  # seconds - how frequently to send prediction commands
+send_interval = 0.1  # seconds - how frequently to send prediction commands
 
 while keep_running:
     try:
