@@ -92,18 +92,16 @@ while keep_running:
             if len(data_window) > window_len:
                 data_window = data_window[-window_len:]
             if len(data_window) == window_len and (time.time() - last_send_time) >= send_interval:
-                timestep_counter += 1
-                if timestep_counter % 5 == 0:
-                    nn_pred = make_prediction_torch(data_window)
-                    rms_pred = preprocess_predict(data_window)
-                    final_pred = ensemble_detect(nn_pred, rms_pred)
-                    # Add to predictor history
-                    predictor.add_prediction(final_pred)
-                    consistent = predictor.consistent_prediction()
-                    print(f"Prediction: {consistent}")
-                    # Send command based on consistent result ('1' for tremor, '0' otherwise)
-                    ser.write(str(int(consistent)).encode())
-                    last_send_time = time.time()
+                nn_pred = make_prediction_torch(data_window)
+                rms_pred = preprocess_predict(data_window)
+                final_pred = ensemble_detect(nn_pred, rms_pred)
+                # Add to predictor history
+                predictor.add_prediction(final_pred)
+                consistent = predictor.consistent_prediction()
+                print(f"Prediction: {consistent}")
+                # Send command based on consistent result ('1' for tremor, '0' otherwise)
+                ser.write(str(int(consistent)).encode())
+                last_send_time = time.time()
         else:
             data_window = []
     except Exception as e:
