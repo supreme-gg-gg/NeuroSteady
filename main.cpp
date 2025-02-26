@@ -71,8 +71,8 @@ void loop() {
   unsigned long currentMillis = millis();
 
   if (Serial.available() > 0) {
-    int tremorRaw = Serial.parseInt();
-    int tremor = getFilteredTremor(tremorRaw);
+    char tremorRaw = Serial.read();  // Read single byte instead of full integer
+    int tremor = getFilteredTremor(tremorRaw - '0');  // Convert from ASCII to int
 
     if (tremor == 1 && !movedTo90) {
       moveServoSmooth(servo1, servo1.read(), 90);
